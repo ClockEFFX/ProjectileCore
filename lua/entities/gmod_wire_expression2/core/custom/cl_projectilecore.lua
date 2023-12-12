@@ -13,4 +13,4 @@ E2Helper.Descriptions[ "shootRPG" ] = "Fires a RPG missile with specified positi
 E2Helper.Descriptions[ "shootSMGGrenade" ] = "Fires a SMG grenade with specified position, velocity, damage, and blast radius\nNOTE: Damage is subject to falloff\nReturns the grenade entity"
 
 -- ep2
-E2Helper.Descriptions[ "shootFlechette" ] = "Fires a hunter flechette (WIP)"
+E2Helper.Descriptions[ "shootFlechette" ] = "Fires a flechette with specified position, and velocity\nReturns the flechette entity"

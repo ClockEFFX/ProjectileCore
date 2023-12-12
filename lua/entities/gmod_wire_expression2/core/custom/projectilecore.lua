@@ -153,9 +153,18 @@ PROJECTILECORE.SMGGRENADE_DELAY = PROJECTILECORE.CVARS.SMGGRENADE_DELAY:GetFloat
 
 
 
--- ep2 convars
-PROJECTILECORE.CVARS.FLECHETTE_ENABLED = CreateConVar( "projcore_flechette_enabled", "0", FCVAR_ARCHIVE, "Allow E2 to shoot hunter flechettes (EP2 required)", 0, 1 )
+-- flechette
+PROJECTILECORE.CVARS.FLECHETTE_ENABLED = CreateConVar( "projcore_flechette_enabled", "1", FCVAR_ARCHIVE, "Allow E2 to shoot hunter flechettes (EP2 required)", 0, 1 )
 PROJECTILECORE.FLECHETTE_ENABLED = PROJECTILECORE.CVARS.FLECHETTE_ENABLED:GetBool()
+
+PROJECTILECORE.CVARS.FLECHETTE_MAXVEL = CreateConVar( "projcore_flechette_maxvel", "2000", FCVAR_ARCHIVE, "Maximum velocity E2 fired flechettes are allowed to have (set to -1 for no limit)" )
+PROJECTILECORE.FLECHETTE_MAXVEL = PROJECTILECORE.CVARS.FLECHETTE_MAXVEL:GetInt()
+
+PROJECTILECORE.CVARS.FLECHETTE_DELAY = CreateConVar( "projcore_flechette_delay", "0.1", FCVAR_ARCHIVE, "Minimum time between flechette shots" )
+PROJECTILECORE.FLECHETTE_DELAY = PROJECTILECORE.CVARS.FLECHETTE_DELAY:GetFloat()
+
+
+
 
 
 
@@ -901,9 +910,12 @@ function PROJECTILECORE.SHOOTFLECHETTE( ent, chip, pos, vel )
 	flech:Activate()
 	
 	local dir = Vector( vel[ 1 ], vel[ 2 ], vel[ 3 ] )
-	flech:SetVelocity( dir )
 	flech:SetAngles( dir:Angle() )
 
+	local maxvel = PROJECTILECORE.FLECHETTE_MAXVEL
+	dir = maxvel > -1 and PROJECTILECORE.CLAMPVECTOR( dir, maxvel ) or dir
+
+	flech:SetVelocity( dir )
 
 
 

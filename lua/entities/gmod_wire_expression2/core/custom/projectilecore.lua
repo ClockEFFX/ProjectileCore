@@ -165,6 +165,28 @@ PROJECTILECORE.FLECHETTE_DELAY = PROJECTILECORE.CVARS.FLECHETTE_DELAY:GetFloat()
 
 
 
+-- magnusson
+PROJECTILECORE.CVARS.MAGNUSSON_ENABLED = CreateConVar( "projcore_magnusson_enabled", "1", FCVAR_ARCHIVE, "Allow E2 to spawn strider busters (EP2 required)", 0, 1 )
+PROJECTILECORE.MAGNUSSON_ENABLED = PROJECTILECORE.CVARS.MAGNUSSON_ENABLED:GetBool()
+
+PROJECTILECORE.CVARS.MAGNUSSON_MAXDMG = CreateConVar( "projcore_magnusson_maxdmg", "100", FCVAR_ARCHIVE, "Maximum damage E2 spawned strider busters are allowed to have (set to -1 for no limit)" )
+PROJECTILECORE.MAGNUSSON_MAXDMG = PROJECTILECORE.CVARS.MAGNUSSON_MAXDMG:GetInt()
+
+PROJECTILECORE.CVARS.MAGNUSSON_MAXRADIUS = CreateConVar( "projcore_magnusson_maxradius", "300", FCVAR_ARCHIVE, "Maximum explosion radius E2 spawned strider busters are allowed to have (set to -1 for no limit)" )
+PROJECTILECORE.MAGNUSSON_MAXRADIUS = PROJECTILECORE.CVARS.MAGNUSSON_MAXRADIUS:GetInt()
+
+PROJECTILECORE.CVARS.MAGNUSSON_MAXTIMER = CreateConVar( "projcore_magnusson_maxtimer", "5", FCVAR_ARCHIVE, "Maximum explosion timer for E2 spawned strider busters (set to -1 for no limit)" )
+PROJECTILECORE.MAGNUSSON_MAXTIMER = PROJECTILECORE.CVARS.MAGNUSSON_MAXTIMER:GetFloat()
+
+PROJECTILECORE.CVARS.MAGNUSSON_MINTIMER = CreateConVar( "projcore_magnusson_mintimer", "0", FCVAR_ARCHIVE, "Minimum explosion timer for E2 spawned strider busters (set to -1 for no limit)" )
+PROJECTILECORE.MAGNUSSON_MINTIMER = PROJECTILECORE.CVARS.MAGNUSSON_MINTIMER:GetFloat()
+
+PROJECTILECORE.CVARS.MAGNUSSON_MAXVEL = CreateConVar( "projcore_magnusson_maxvel", "1000", FCVAR_ARCHIVE, "Maximum velocity E2 spawned strider busters are allowed to have (set to -1 for no limit)" )
+PROJECTILECORE.MAGNUSSON_MAXVEL = PROJECTILECORE.CVARS.MAGNUSSON_MAXVEL:GetInt()
+
+PROJECTILECORE.CVARS.MAGNUSSON_DELAY = CreateConVar( "projcore_magnusson_delay", "3", FCVAR_ARCHIVE, "Minimum time between strider buster spawns" )
+PROJECTILECORE.MAGNUSSON_DELAY = PROJECTILECORE.CVARS.MAGNUSSON_DELAY:GetFloat()
+
 
 
 
@@ -202,7 +224,8 @@ function PROJECTILECORE.CLAMPVECTOR( vec, max )
 	
 end
 
-
+local E2totalspawnedprops = 0
+local E2tempSpawnedProps = 0
 
 
 
@@ -532,6 +555,25 @@ function PROJECTILECORE.SHOOTGRENADE( ent, chip, pos, vel, dmg, radius, timer )
 
 
 
+	cleanup.Add( chip.player, "props", frag )
+	
+	if ( chip.data.propSpawnUndo ) then
+		undo.Create( "Frag Grenade" )
+			undo.AddEntity( frag )
+			undo.SetPlayer( chip.player )
+		undo.Finish()
+	end
+
+	frag:CallOnRemove( "wire_expression2_propcore_remove",
+		function( frag )
+			chip.data.spawnedProps[ frag ] = nil
+			E2totalspawnedprops = E2totalspawnedprops - 1
+		end
+	)
+
+	chip.data.spawnedProps[ frag ] = chip.data.propSpawnUndo
+	E2totalspawnedprops = E2totalspawnedprops + 1
+	E2tempSpawnedProps = E2tempSpawnedProps + 1
 
 	return frag
 	
@@ -631,6 +673,25 @@ function PROJECTILECORE.SHOOTHELIBOMB( ent, chip, pos, vel, dmg, radius, timer )
 	helibomb:Fire( "ExplodeIn", "", timer )
 
 
+	cleanup.Add( chip.player, "props", helibomb )
+	
+	if ( chip.data.propSpawnUndo ) then
+		undo.Create( "Helicopter Bomb" )
+			undo.AddEntity( helibomb )
+			undo.SetPlayer( chip.player )
+		undo.Finish()
+	end
+
+	helibomb:CallOnRemove( "wire_expression2_propcore_remove",
+		function( helibomb )
+			chip.data.spawnedProps[ helibomb ] = nil
+			E2totalspawnedprops = E2totalspawnedprops - 1
+		end
+	)
+
+	chip.data.spawnedProps[ helibomb ] = chip.data.propSpawnUndo
+	E2totalspawnedprops = E2totalspawnedprops + 1
+	E2tempSpawnedProps = E2tempSpawnedProps + 1
 
 
 	return helibomb
@@ -694,7 +755,25 @@ function PROJECTILECORE.SHOOTCOMMINE( ent, chip, pos, vel )
 	mine:GetPhysicsObject():SetVelocity( dir )
 
 
+	cleanup.Add( chip.player, "props", mine )
+	
+	if ( chip.data.propSpawnUndo ) then
+		undo.Create( "Combine Mine" )
+			undo.AddEntity( mine )
+			undo.SetPlayer( chip.player )
+		undo.Finish()
+	end
 
+	mine:CallOnRemove( "wire_expression2_propcore_remove",
+		function( mine )
+			chip.data.spawnedProps[ mine ] = nil
+			E2totalspawnedprops = E2totalspawnedprops - 1
+		end
+	)
+
+	chip.data.spawnedProps[ mine ] = chip.data.propSpawnUndo
+	E2totalspawnedprops = E2totalspawnedprops + 1
+	E2tempSpawnedProps = E2tempSpawnedProps + 1
 
 	return mine
 	
@@ -863,7 +942,7 @@ end
 -- flechette
 function PROJECTILECORE.SHOOTFLECHETTE( ent, chip, pos, vel )
 	
-	if ( PROJECTILECORE.FLECHETTE_ENABLED == 0 ) then
+	if ( PROJECTILECORE.FLECHETTE_ENABLED == 0 or not PROJECTILECORE.EP2MOUNTED ) then
 		return nil
 	end
 
@@ -895,10 +974,6 @@ function PROJECTILECORE.SHOOTFLECHETTE( ent, chip, pos, vel )
 
 	
 	-- entity
-	if ( not PROJECTILECORE.EP2MOUNTED ) then
-		return nil
-	end
-	
 	local flech = ents.Create( "hunter_flechette" )
     if ( not IsValid( flech ) ) then 
 		return nil
@@ -922,6 +997,101 @@ function PROJECTILECORE.SHOOTFLECHETTE( ent, chip, pos, vel )
 	return flech
 	
 end
+
+-- magnusson
+function PROJECTILECORE.SHOOTMAGNUSSON( ent, chip, pos, vel, dmg, radius )
+	
+	if ( PROJECTILECORE.MAGNUSSON_ENABLED == 0 or not PROJECTILECORE.EP2MOUNTED ) then
+		return nil
+	end
+
+	-- permission
+	if ( CPPI ) then
+		if ( not ent:CPPICanTool( chip.player ) ) then
+			return nil
+		end
+	else
+		if ( not isOwner( chip, ent ) ) then
+			return nil
+		end
+	end
+
+	if ( not IsValid( ent ) ) then
+		return nil
+	end
+	
+
+	-- delay
+	if ( PROJECTILECORE.MAGNUSSON_DELAY > 0 ) then
+		if ( ent.ProjCoreDelay ) then
+			if ( CurTime() < ent.ProjCoreDelay ) then
+				return nil
+			end
+		end
+		ent.ProjCoreDelay = CurTime() + PROJECTILECORE.MAGNUSSON_DELAY
+	end
+
+	
+	-- entity
+	local buster = ents.Create( "weapon_striderbuster" )
+    if ( not IsValid( buster ) ) then 
+		return nil
+	end
+	
+	buster:SetPos( Vector( pos[ 1 ], pos[ 2 ], pos[ 3 ] ) or ent:GetPos() )
+	buster:SetOwner( chip.player )
+	buster:Spawn()
+	buster:Activate()
+	
+	local dir = Vector( vel[ 1 ], vel[ 2 ], vel[ 3 ] )
+	buster:SetAngles( dir:Angle() )
+
+	local maxvel = PROJECTILECORE.MAGNUSSON_MAXVEL
+	dir = maxvel > -1 and PROJECTILECORE.CLAMPVECTOR( dir, maxvel ) or dir
+	
+	local phys = buster:GetPhysicsObject()
+	phys:SetVelocity( dir )
+
+
+	-- damage
+	buster.ProjCoreDmg = 0 -- set the base entities damage to 0
+	
+	local maxdmg = PROJECTILECORE.MAGNUSSON_MAXDMG
+	dmg = maxdmg > -1 and math.Clamp( dmg, 0, maxdmg ) or dmg
+	
+	local maxradius = PROJECTILECORE.MAGNUSSON_MAXRADIUS
+	radius = maxradius > -1 and math.Clamp( radius, 0, maxradius ) or radius
+	
+	buster:CallOnRemove( "ProjectileCore_Explosion", function( self )
+		util.BlastDamage( self, chip.player, self:GetPos(), radius, dmg )
+	end )
+
+	
+	cleanup.Add( chip.player, "props", buster )
+	
+	if ( chip.data.propSpawnUndo ) then
+		undo.Create( "Magnusson" )
+			undo.AddEntity( buster )
+			undo.SetPlayer( chip.player )
+		undo.Finish()
+	end
+
+	buster:CallOnRemove( "wire_expression2_propcore_remove",
+		function( buster )
+			chip.data.spawnedProps[ buster ] = nil
+			E2totalspawnedprops = E2totalspawnedprops - 1
+		end
+	)
+
+	chip.data.spawnedProps[ buster ] = chip.data.propSpawnUndo
+	E2totalspawnedprops = E2totalspawnedprops + 1
+	E2tempSpawnedProps = E2tempSpawnedProps + 1
+
+
+	return buster
+	
+end
+
 
 
 
@@ -992,10 +1162,17 @@ e2function entity entity:shootSMGGrenade( vector pos, vector vel, number dmg, nu
 	
 end
 
--- -- game specific projectiles
-e2function number entity:shootFlechette( vector pos, vector vel )
+
+
+-- ep2 projectiles
+e2function entity entity:shootFlechette( vector pos, vector vel )
 	
 	return PROJECTILECORE.SHOOTFLECHETTE( this, self, pos, vel )
+	
+end
+e2function entity entity:shootMagnusson( vector pos, vector vel, number dmg, number radius )
+	
+	return PROJECTILECORE.SHOOTMAGNUSSON( this, self, pos, vel, dmg, radius )
 	
 end
 

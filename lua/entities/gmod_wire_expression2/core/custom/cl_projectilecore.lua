@@ -14,3 +14,4 @@ E2Helper.Descriptions[ "shootSMGGrenade" ] = "Fires a SMG grenade with specified
 
 -- ep2
 E2Helper.Descriptions[ "shootFlechette" ] = "Fires a flechette with specified position, and velocity\nReturns the flechette entity"
+E2Helper.Descriptions[ "shootMagnusson" ] = "Spawns a strider buster with specified position, velocity, damage, and radius\nNOTE: Damage is subject to falloff\nReturns the strider buster entity"
